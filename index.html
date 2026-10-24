@@ -321,6 +321,42 @@
     }
     .result-meta strong { display: block; font-size: 20px; }
     .result-meta span { color: var(--muted); font-size: 12px; }
+    .answer-summary {
+      margin: 0 0 24px;
+      text-align: left;
+    }
+    .answer-summary-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+    .answer-summary-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .answer-summary-item {
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--muted);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
+      font-size: 13px;
+    }
+    .answer-summary-item.correct { border-left-color: var(--correct); }
+    .answer-summary-item.wrong { border-left-color: var(--wrong); }
+    .answer-summary-question {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: 800;
+    }
+    .answer-summary-status {
+      display: block;
+      color: var(--muted);
+    }
+    .answer-summary-item.correct .answer-summary-status { color: var(--correct); }
+    .answer-summary-item.wrong .answer-summary-status { color: var(--wrong); }
     .burst { animation: burst .65s ease; }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
@@ -398,6 +434,10 @@
           <div><strong id="final-score">0 / 10</strong><span>Puntuación final</span></div>
           <div style="text-align:right;"><strong id="final-percent">0%</strong><span>Precisión</span></div>
         </div>
+        <section class="answer-summary" aria-labelledby="answer-summary-title">
+          <h3 class="answer-summary-title" id="answer-summary-title">Resumen de respuestas</h3>
+          <ol class="answer-summary-list" id="answer-summary-list"></ol>
+        </section>
         <button class="button" id="restart-button" type="button">Volver a intentarlo <span aria-hidden="true">↻</span></button>
       </div>
     </section>
@@ -421,6 +461,7 @@
     let current = 0;
     let score = 0;
     let answered = false;
+    let selectedAnswers = [];
 
     function showScreen(id) {
       ["start-screen", "quiz-screen", "result-screen"].forEach((screen) => {
@@ -452,6 +493,7 @@
       answered = true;
       const selected = Number(event.currentTarget.dataset.index);
       const question = questions[current];
+      selectedAnswers[current] = selected;
       const buttons = [...document.querySelectorAll(".answer")];
       buttons.forEach((button) => { button.disabled = true; });
       buttons[question.answer].classList.add("correct");
@@ -485,13 +527,29 @@
       $("result-message").textContent = message;
       $("final-score").textContent = `${score} / ${questions.length}`;
       $("final-percent").textContent = `${percentage}%`;
+      $("answer-summary-list").innerHTML = questions.map((question, index) => {
+        const selected = selectedAnswers[index];
+        const isCorrect = selected === question.answer;
+        const status = isCorrect ? "Correcta" : "Incorrecta";
+        const selectedText = question.options[selected];
+        const correctText = question.options[question.answer];
+        return `
+          <li class="answer-summary-item ${isCorrect ? "correct" : "wrong"}">
+            <span class="answer-summary-question">${index + 1}. ${question.text}</span>
+            <span class="answer-summary-status">${status}: ${selectedText}</span>
+            ${isCorrect ? "" : `<span class="answer-summary-status">Respuesta correcta: ${correctText}</span>`}
+          </li>
+        `;
+      }).join("");
       showScreen("result-screen");
     }
 
     $("start-button").addEventListener("click", () => {
       current = 0;
       score = 0;
+      selectedAnswers = [];
       $("score").textContent = "0";
+      $("answer-summary-list").innerHTML = "";
       showScreen("quiz-screen");
       renderQuestion();
     });
@@ -503,7 +561,9 @@
     $("restart-button").addEventListener("click", () => {
       current = 0;
       score = 0;
+      selectedAnswers = [];
       $("score").textContent = "0";
+      $("answer-summary-list").innerHTML = "";
       showScreen("quiz-screen");
       renderQuestion();
     });
